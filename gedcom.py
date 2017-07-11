@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import fileinput
+import sys
+import io
+import argparse
 import functools
 import itertools
 
@@ -37,6 +39,10 @@ class Node:
         self.data = f(self.data)
         for c in self.children:
             c.mutate(f)
+    def mutate_c(self, f):
+        self.data = f(self.data, self.children)
+        for c in self.children:
+            c.mutate_c(f)
 
 
 
@@ -58,24 +64,46 @@ def pv(a,n):
     return (r,pn.add(n),gv(n))
 
 def unp(p):
+    'inverse of str.partition'
     return p[0]+p[1]+p[2]
 
 def is_ptr(s):
     return s.startswith(PTR) and not s.startswith(PTR+PTR)
 
+def conc_cont(d, c):
+    i = 0
+    n = len(c)
+    x,tag,val = d
+    while i < n:
+        ctag = c[i].data[1]
+        if ctag == 'CONC' or ctag == 'CONT':
+            sep = '\n' if ctag == 'CONT' else ''
+            val = val+sep+c[i].data[2]
+            del c[i]
+            n = n-1
+        else:
+            i = i+1
+    return (x,tag,val)
 
 
-s = fileinput.input()
+
+
+
+e = 'latin-1'
+s = io.TextIOWrapper(sys.stdin.buffer, encoding=e)
+
 s = map(str.strip, s)
 
 # level numbers
 s = map(lambda n: n.partition(' '), s)
 s = map(lambda n: Node((int(n[0]),n[2].strip())), s)
 
+
 # build tree structure based on levels
 n = Node((-1,''))
 n,_,_ = functools.reduce(pv, s, (n,n,0))
 n.mutate(lambda n: n[1]) # remove level numbers
+
 
 # ID
 n.mutate(lambda n: n.partition(' '))
@@ -85,19 +113,20 @@ n.mutate(lambda n: (n[0].strip(PTR),n[2]) if is_ptr(n[0]) else (None,unp(n)))
 n.mutate(lambda n: (n[0],n[1].partition(' ')))
 n.mutate(lambda n: (n[0],n[1][0],n[1][2]))
 
-# TODO: CONC
-# TODO: CONT
+
+
+n.mutate_c(conc_cont)
 
 # value (or pointer)
 n.mutate(lambda n: (n[0],n[1])+((None,n[2]) if is_ptr(n[2]) else (n[2],None)))
 
-# empty string value --> None
-n.mutate(lambda n: (n[0],n[1],n[2] if n[2] else None,n[3]))
+# empty (or whitespace-only) string value --> None
+n.mutate(lambda n: (n[0],n[1],n[2].strip() if n[2] else None,n[3]))
 
 # @ptr@ --> ptr
 n.mutate(lambda n: (n[0],n[1],n[2],n[3].strip(PTR) if n[3] else None))
 
-# @@ --> @ in values
+# @@ in values --> @
 n.mutate(lambda n: (n[0],n[1],n[2].replace(PTR+PTR,PTR) if n[2] else None,n[3]))
 
 
