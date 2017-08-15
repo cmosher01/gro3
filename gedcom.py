@@ -21,6 +21,7 @@ class Node:
     def add(self, c):
         self.children.append(c)
         c.parent = self
+        # TODO self.verify(parent==None) ???
         return self
     def verify(self, top=True):
         if top:
@@ -96,12 +97,12 @@ s = map(str.strip, s)
 
 # level numbers
 s = map(lambda n: n.partition(' '), s)
-s = map(lambda n: Node((int(n[0]),n[2].strip())), s)
+s = map(lambda n: Node((int(n[0]),n[2]))), s)
 
 
 # build tree structure based on levels
 n = Node((-1,''))
-n,_,_ = functools.reduce(pv, s, (n,n,0))
+n,__,__ = functools.reduce(pv, s, (n,n,0))
 n.mutate(lambda n: n[1]) # remove level numbers
 
 
