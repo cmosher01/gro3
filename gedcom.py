@@ -97,8 +97,7 @@ s = map(str.strip, s)
 
 # level numbers
 s = map(lambda n: n.partition(' '), s)
-s = map(lambda n: Node((int(n[0]),n[2]))), s)
-
+s = map(lambda n: Node((int(n[0]),n[2])), s)
 
 # build tree structure based on levels
 n = Node((-1,''))
